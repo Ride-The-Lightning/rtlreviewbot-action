@@ -1,0 +1,131 @@
+name: 'rtlreviewbot'
+description: 'Public entry point for rtlreviewbot. Resolvable from any consumer repo (public or private); fetches the private review runtime at execution time and runs it.'
+
+# Why this repo exists
+# --------------------
+# A *public* consumer repo cannot resolve a `uses:` that points at the private
+# `Ride-The-Lightning/rtlreviewbot` repo — GitHub's org Actions-access setting
+# only extends a private repo's actions to private/internal org repos, never to
+# public ones. This thin PUBLIC action is universally resolvable. It carries no
+# review logic: it mints a least-privilege token, checks out the private
+# runtime, and execs the same `scripts/run-review.sh` entry point as before.
+#
+# See Ride-The-Lightning/rtlreviewbot#17 for the design discussion.
+
+inputs:
+  event_name:
+    description: 'GitHub event that triggered the consumer shim (issue_comment, pull_request).'
+    required: true
+  event_action:
+    description: 'Event-specific action (e.g. created, review_requested, closed).'
+    required: false
+    default: ''
+  repo:
+    description: 'Consumer repo in owner/name form (typically github.repository).'
+    required: true
+  pr_number:
+    description: 'Pull request number.'
+    required: true
+  actor:
+    description: 'Login of the user that triggered the event.'
+    required: true
+  comment_body:
+    description: 'Body of the triggering comment, for issue_comment events.'
+    required: false
+    default: ''
+  comment_id:
+    description: 'Numeric id of the triggering comment, for issue_comment events. Used to react with a 👍 on success.'
+    required: false
+    default: ''
+  installation_id:
+    description: 'GitHub App installation ID for the consumer repo. Find it on the App settings → Install App page.'
+    required: true
+  app_id:
+    description: 'rtlreviewbot GitHub App ID. Consumers pass this via `with: app_id:` from their org secret (typically GATEWAY_APP_ID).'
+    required: true
+  private_key:
+    description: 'rtlreviewbot GitHub App private key, PEM contents. Consumers pass this via `with: private_key:` from their org secret (typically GATEWAY_PRIVATE_KEY).'
+    required: true
+  anthropic_api_key:
+    description: 'Anthropic API key for the /code-review skill (org secret ANTHROPIC_API_KEY). Either this or claude_code_oauth_token must be set; if both are set, API is tried first and OAuth is the fallback.'
+    required: false
+    default: ''
+  claude_code_oauth_token:
+    description: 'Claude Code OAuth token (org secret CLAUDE_CODE_OAUTH_TOKEN). Either this or anthropic_api_key must be set.'
+    required: false
+    default: ''
+  review_mode:
+    description: 'Review architecture: `multi` (default — orchestrator dispatches specialist sub-agents and merges their findings) or `single` (one Claude call). Both emit the identical output.'
+    required: false
+    default: 'multi'
+  runtime_ref:
+    description: 'Ref (tag/branch/SHA) of the private Ride-The-Lightning/rtlreviewbot runtime to check out and run. Defaults to the release this action repo was tagged in lockstep with. Override only for testing an unreleased runtime.'
+    required: false
+    default: 'v0.10.0'
+
+runs:
+  using: composite
+  steps:
+    # 1. Mint a least-privilege token (contents:read on rtlreviewbot only) that
+    #    can read the private runtime. bootstrap-token.sh discovers the
+    #    installation and scopes the token; the org installation id is not
+    #    hardcoded.
+    - name: Mint bootstrap token (reads private rtlreviewbot runtime)
+      id: bootstrap
+      shell: bash
+      env:
+        BOOTSTRAP_APP_ID:      ${{ inputs.app_id }}
+        BOOTSTRAP_PRIVATE_KEY: ${{ inputs.private_key }}
+      run: |
+        TOKEN="$("${GITHUB_ACTION_PATH}/bootstrap-token.sh")"
+        echo "::add-mask::${TOKEN}"
+        echo "token=${TOKEN}" >> "$GITHUB_OUTPUT"
+
+    # 2. Check out the private runtime at the pinned ref using that token.
+    - name: Check out private runtime
+      uses: actions/checkout@v4
+      with:
+        repository: Ride-The-Lightning/rtlreviewbot
+        ref:        ${{ inputs.runtime_ref }}
+        token:      ${{ steps.bootstrap.outputs.token }}
+        path:       .rtlreviewbot-runtime
+        persist-credentials: false
+
+    - name: Install Claude Code CLI
+      shell: bash
+      run: npm install -g @anthropic-ai/claude-code
+
+    # 3. Run the runtime. This is the private action's "Run rtlreviewbot" step
+    #    verbatim except the script path: run-review.sh resolves all of its
+    #    siblings relative to its own location (BASH_SOURCE), so it runs
+    #    correctly from any checkout path.
+    - name: Run rtlreviewbot
+      shell: bash
+      env:
+        GATEWAY_APP_ID: ${{ inputs.app_id }}
+        GATEWAY_PRIVATE_KEY: ${{ inputs.private_key }}
+        GATEWAY_INSTALLATION_ID: ${{ inputs.installation_id }}
+        ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
+        RTL_REVIEW_MODE: ${{ inputs.review_mode }}
+        # All inputs flow through env, not direct ${{ … }} substitution into the
+        # run-script body. Substituting user-controlled content (especially
+        # comment_body) into shell text triggers backtick command-substitution
+        # and parenthesis subshell parsing — both a crash hazard and a
+        # shell-injection surface.
+        INPUT_EVENT_NAME:    ${{ inputs.event_name }}
+        INPUT_EVENT_ACTION:  ${{ inputs.event_action }}
+        INPUT_REPO:          ${{ inputs.repo }}
+        INPUT_PR_NUMBER:     ${{ inputs.pr_number }}
+        INPUT_ACTOR:         ${{ inputs.actor }}
+        INPUT_COMMENT_BODY:  ${{ inputs.comment_body }}
+        INPUT_COMMENT_ID:    ${{ inputs.comment_id }}
+      run: |
+        "${GITHUB_WORKSPACE}/.rtlreviewbot-runtime/scripts/run-review.sh" \
+          --event-name   "$INPUT_EVENT_NAME" \
+          --event-action "$INPUT_EVENT_ACTION" \
+          --repo         "$INPUT_REPO" \
+          --pr           "$INPUT_PR_NUMBER" \
+          --actor        "$INPUT_ACTOR" \
+          --comment-body "$INPUT_COMMENT_BODY" \
+          --comment-id   "$INPUT_COMMENT_ID"
