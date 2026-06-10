@@ -14,6 +14,8 @@ It contains **no review logic** — only `action.yml` (the composite entry point
 
 The token the consumer's `installation_id` produces (for posting reviews on the consumer PR) is minted separately inside the runtime, exactly as before. The bootstrap token is a distinct, narrower token used only to read the runtime.
 
+For the full flow — the two-token model, the run sequence, and why the runtime needs no changes — see [`docs/architecture.md`](docs/architecture.md).
+
 ## Usage
 
 In a consumer repo, point the shim's `uses:` at this repo:
