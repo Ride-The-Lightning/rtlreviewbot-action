@@ -45,7 +45,7 @@ Same surface as the private action, plus one:
 
 | Input | Required | Default | Notes |
 |-------|----------|---------|-------|
-| `runtime_ref` | no | `v0.10.0` | Ref of the private runtime to run. Defaults to the release this action was tagged in lockstep with. Override only to test an unreleased runtime. |
+| `runtime_ref` | no | `v0.12.0` | Ref of the private runtime to run. Defaults to the release this action was tagged in lockstep with. Override only to test an unreleased runtime. |
 
 All other inputs (`event_name`, `repo`, `pr_number`, `actor`, `comment_*`, `installation_id`, `app_id`, `private_key`, `anthropic_api_key`, `claude_code_oauth_token`, `review_mode`) match the private action one-for-one.
 
