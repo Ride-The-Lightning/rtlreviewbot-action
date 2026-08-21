@@ -58,10 +58,14 @@ inputs:
     description: 'Review architecture: `multi` (default — orchestrator dispatches specialist sub-agents and merges their findings) or `single` (one Claude call). Both emit the identical output.'
     required: false
     default: 'multi'
+  exclude_paths:
+    description: 'Comma-separated path globs for committed build artifacts (e.g. `frontend/**`) to drop from the reviewed diff before the size ceiling is measured and to skip when pre-fetching file contents. Excluded files remain listed for the reviewer as changed-but-not-shown. Requires runtime v0.13.0+; earlier runtimes ignore it.'
+    required: false
+    default: ''
   runtime_ref:
     description: 'Ref (tag/branch/SHA) of the private Ride-The-Lightning/rtlreviewbot runtime to check out and run. Defaults to the release this action repo was tagged in lockstep with. Override only for testing an unreleased runtime.'
     required: false
-    default: 'v0.12.0'
+    default: 'v0.13.0'
 
 runs:
   using: composite
@@ -108,6 +112,7 @@ runs:
         ANTHROPIC_API_KEY: ${{ inputs.anthropic_api_key }}
         CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
         RTL_REVIEW_MODE: ${{ inputs.review_mode }}
+        RTL_EXCLUDE_PATHS: ${{ inputs.exclude_paths }}
         # All inputs flow through env, not direct ${{ … }} substitution into the
         # run-script body. Substituting user-controlled content (especially
         # comment_body) into shell text triggers backtick command-substitution
