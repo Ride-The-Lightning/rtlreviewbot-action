@@ -62,10 +62,18 @@ inputs:
     description: 'Comma-separated path globs for committed build artifacts (e.g. `frontend/**`) to drop from the reviewed diff before the size ceiling is measured and to skip when pre-fetching file contents. Excluded files remain listed for the reviewer as changed-but-not-shown. Requires runtime v0.13.0+; earlier runtimes ignore it.'
     required: false
     default: ''
+  inline_min_severity:
+    description: 'Lowest severity posted as an inline comment: `blocker`, `major`, `minor` or `nit`. Empty means `major`. Findings below it go into a collapsed section of the review body, in full; a finding with a suggested fix stays inline at any severity. `nit` posts every anchorable finding inline (the pre-v0.14.0 behaviour). Requires runtime v0.14.0+; earlier runtimes ignore it.'
+    required: false
+    default: ''
+  effort:
+    description: 'Default effort level for reviews: `low`, `medium`, `high`, `xhigh` or `max`. Empty means `medium`. A maintainer overrides it per PR with `/rtl review <level>`, and a plain `/rtl re-review` reuses the previous review''s level. Requires runtime v0.14.0+; earlier runtimes ignore it.'
+    required: false
+    default: ''
   runtime_ref:
     description: 'Ref (tag/branch/SHA) of the private Ride-The-Lightning/rtlreviewbot runtime to check out and run. Defaults to the release this action repo was tagged in lockstep with. Override only for testing an unreleased runtime.'
     required: false
-    default: 'v0.13.0'
+    default: 'v0.14.0'
 
 runs:
   using: composite
@@ -113,6 +121,8 @@ runs:
         CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude_code_oauth_token }}
         RTL_REVIEW_MODE: ${{ inputs.review_mode }}
         RTL_EXCLUDE_PATHS: ${{ inputs.exclude_paths }}
+        RTL_INLINE_MIN_SEVERITY: ${{ inputs.inline_min_severity }}
+        RTL_CLAUDE_EFFORT: ${{ inputs.effort }}
         # All inputs flow through env, not direct ${{ … }} substitution into the
         # run-script body. Substituting user-controlled content (especially
         # comment_body) into shell text triggers backtick command-substitution

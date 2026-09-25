@@ -46,9 +46,11 @@ Same surface as the private action, plus `runtime_ref`:
 | Input | Required | Default | Notes |
 |-------|----------|---------|-------|
 | `exclude_paths` | no | `''` | Comma-separated globs for committed build artifacts (e.g. `frontend/**`) removed from the reviewed diff before the size ceiling is measured. Runtime v0.13.0+. |
-| `runtime_ref` | no | `v0.13.0` | Ref of the private runtime to run. Defaults to the release this action was tagged in lockstep with. Override only to test an unreleased runtime. |
+| `inline_min_severity` | no | `''` | Lowest severity posted as an inline comment (`blocker`/`major`/`minor`/`nit`; empty = `major`). Lower findings go into a collapsed body section; `nit` restores everything-inline. Runtime v0.14.0+. |
+| `effort` | no | `''` | Default effort level (`low`/`medium`/`high`/`xhigh`/`max`; empty = `medium`). Overridden per PR by `/rtl review <level>`; a plain `/rtl re-review` reuses the previous level. Runtime v0.14.0+. |
+| `runtime_ref` | no | `v0.14.0` | Ref of the private runtime to run. Defaults to the release this action was tagged in lockstep with. Override only to test an unreleased runtime. |
 
-All other inputs (`event_name`, `repo`, `pr_number`, `actor`, `comment_*`, `installation_id`, `app_id`, `private_key`, `anthropic_api_key`, `claude_code_oauth_token`, `review_mode`, `exclude_paths`) match the private action one-for-one.
+All other inputs (`event_name`, `repo`, `pr_number`, `actor`, `comment_*`, `installation_id`, `app_id`, `private_key`, `anthropic_api_key`, `claude_code_oauth_token`, `review_mode`, `exclude_paths`, `inline_min_severity`, `effort`) match the private action one-for-one.
 
 ## Versioning
 
