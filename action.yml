@@ -70,10 +70,14 @@ inputs:
     description: 'Default effort level for reviews: `low`, `medium`, `high`, `xhigh` or `max`. Empty means `medium`. A maintainer overrides it per PR with `/rtl review <level>`, and a plain `/rtl re-review` reuses the previous review''s level. Requires runtime v0.14.0+; earlier runtimes ignore it.'
     required: false
     default: ''
+  validate_findings:
+    description: 'Set to `true` to add a validation stage in multi mode: each `blocker` or `major` finding goes to two independent validator agents that try to disprove it, and only findings that survive are posted at full severity. Empty means `false`. Adds agent calls and run time to reviews that have such findings. Requires runtime v0.16.0+; earlier runtimes ignore it.'
+    required: false
+    default: ''
   runtime_ref:
     description: 'Ref (tag/branch/SHA) of the private Ride-The-Lightning/rtlreviewbot runtime to check out and run. Defaults to the release this action repo was tagged in lockstep with. Override only for testing an unreleased runtime.'
     required: false
-    default: 'v0.15.0'
+    default: 'v0.16.0'
 
 runs:
   using: composite
@@ -123,6 +127,7 @@ runs:
         RTL_EXCLUDE_PATHS: ${{ inputs.exclude_paths }}
         RTL_INLINE_MIN_SEVERITY: ${{ inputs.inline_min_severity }}
         RTL_CLAUDE_EFFORT: ${{ inputs.effort }}
+        RTL_VALIDATE_FINDINGS: ${{ inputs.validate_findings }}
         # All inputs flow through env, not direct ${{ … }} substitution into the
         # run-script body. Substituting user-controlled content (especially
         # comment_body) into shell text triggers backtick command-substitution
